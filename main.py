@@ -6,59 +6,40 @@ from zoneinfo import ZoneInfo
 import uuid 
 import os
 
-data = [
-    {"uid": [f"user_{uuid.uuid4().hex}"],
-    "userName": "askjd", 
-    "password": "123",
-    "email": "askjdaw@gmail.com",
-    "createdAt": datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-    },
-    
-    {"uid": [f"user_{uuid.uuid4().hex}"],
-    "userName": "askjd", 
-    "password": "123",
-    "email": "askjdaw@gmail.com",
-    "createdAt": datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-    }
+# Init the database location
+DATA_FILE="Data/users.json"
+os.makedirs('Data', exist_ok=True)
 
-]
-
-df = pd.DataFrame(data)
-df.to_json('./data.json', orient="records", indent=4, index=False)
-# df = pd.read_json('./data.json')
-
-with open("data.json", "r") as f:
-    dataJson = json.load(f)
+# Ensure users.json exists
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w") as f:
+        json.dump([], f, indent=4)
 
 app = Flask(__name__)
 
-@app.route("/get-user/<user_id>")
+@app.route("/get-user/<uid>")
 def getUser(uid):
-    user_data = {
-        "uid": uid,
-        "name": "John Doe", 
-        "email": "johndoe@gmail.com" 
-    }
 
-    user_extra = request.args.get("extra")
-    if user_extra:
-        user_data["extra"] = user_extra
+    # Loads the file
+    try:
+        with open(DATA_FILE, "r") as f:
+            users = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "No user database found"}), 404
+    
+    # Check and return User info
+    for user in users:
+        if user.get("uid") == uid:
+            return (jsonify(user), 200)
 
-    # return jsonify(user_data), 200
-    return jsonify(dataJson), 200
+    # If User not found
+    return jsonify({"error": f"User with id '{uid}' not found"}), 404
 
 @app.route("/create-user", methods=["POST"])
 def createUser():
     data = request.get_json()
 
-    # FROM THE URL
-    # http://127.0.0.1:5000/create-user?name=shreyas
-    # user_name = request.args.get("name")
-    # data["username"] = user_name
-
-    # FROM THE POST
-    # http://127.0.0.1:5000/create-user
-
+    # INITIALIZING THE DATA
     userName = data["userName"]
     data["userName"] = userName
 
@@ -68,16 +49,21 @@ def createUser():
     email = data["email"]
     data["email"] = email
 
+    data["uid"] = f"user_{datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex[:8]}"
     data["createdAt"] = datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
 
-    data["uid"] = f"user_{datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex[:8]}"
+    # Load existing data
+    with open(DATA_FILE, 'r') as f:
+        users = json.load(f)
+
+    # Append new user
+    users.append(data)
 
     # SAVES TO FILE
-    df = pd.DataFrame([data])
-    os.makedirs('Data', exist_ok=True)
-    df.to_json("Data/users.json", orient="records", indent=4, index=False)
+    with open(DATA_FILE, 'w') as f:
+        json.dump(users, f, indent=4)
 
-    return jsonify(data), 201
+    return jsonify(users), 201
 
 
 if __name__ == "__main__" :
