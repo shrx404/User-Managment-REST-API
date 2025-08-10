@@ -27,8 +27,8 @@ app = Flask(__name__)
 @app.route("/get-user")
 def getUser():
 
-    # http://127.0.0.1:5000/get-user?uid={uid}
-    # http://127.0.0.1:5000/get-user?email={email}
+    # http://{ip-out}:5000/get-user?uid={uid}
+    # http://{ip-out}:5000/get-user?email={email}
 
     # Loads the file
     try:
