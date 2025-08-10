@@ -15,10 +15,20 @@ if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, "w") as f:
         json.dump([], f, indent=4)
 
+# cleaner function for text
+def clean_input(value: str) -> str:
+    return value.strip().strip('"').strip("'") if value else ""
+
+
+# print(clean_input("asdwasd'"))
+
 app = Flask(__name__)
 
-@app.route("/get-user/<uid>")
-def getUser(uid):
+@app.route("/get-user")
+def getUser():
+
+    # http://127.0.0.1:5000/get-user?uid={uid}
+    # http://127.0.0.1:5000/get-user?email={email}
 
     # Loads the file
     try:
@@ -26,14 +36,28 @@ def getUser(uid):
             users = json.load(f)
     except FileNotFoundError:
         return jsonify({"error": "No user database found"}), 404
-    
-    # Check and return User info
-    for user in users:
-        if user.get("uid") == uid:
-            return (jsonify(user), 200)
 
-    # If User not found
-    return jsonify({"error": f"User with id '{uid}' not found"}), 404
+    uid = request.args.get("uid")
+    email = request.args.get("email")
+
+    # Search by UID
+    if uid:
+        uid = clean_input(uid)
+        for user in users:
+            if user.get("uid") == uid:
+                return jsonify(user), 200
+        return jsonify({"error": f"User with id '{uid}' not found"}), 404
+
+    # Search by Email
+    if email:
+        email = clean_input(email)
+        for user in users:
+            if user.get("email") == email:
+                return jsonify(user), 200
+        return jsonify({"error": f"User with email '{email}' not found"}), 404
+    
+
+    return jsonify({"error": "Please provide either uid or email as query params"}), 400
 
 @app.route("/create-user", methods=["POST"])
 def createUser():
@@ -73,3 +97,4 @@ if __name__ == "__main__" :
 # POST - USED TO PUT DATA
 # PUT - USED TO MODIFY THE ALREADY PRESENT DATA
 # DELETE - USED TO DELETE DATA
+
